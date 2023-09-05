@@ -3,6 +3,8 @@
         "vector": "cpp",
         "algorithm": "cpp",
         "iosfwd": "cpp",
-        "xtree": "cpp"
+        "xtree": "cpp",
+        "iostream": "cpp",
+        "ostream": "cpp"
     }
 }
