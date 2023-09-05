@@ -40,6 +40,15 @@ for i in range(h):
     s = f.readline()
     for j in range(len(s)):
         if s[j]=="1": 
-            plt.plot([j+1, j+1], [i, i+1], color='black', linewidth=2)            
-            
+            plt.plot([j+1, j+1], [i, i+1], color='black', linewidth=2)    
+
+
+f2 = open('dist.txt', 'r')
+dist = f2.read().split()
+print(dist)
+for i in range(h):
+    for j in range(w):
+        c = dist[i*w+j]
+        ax.text(j+0.2, i+0.8, c, size=8)
+
 plt.show()
