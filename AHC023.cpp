@@ -57,9 +57,18 @@ struct Solver{
         for(int i=0; i<18; i++) section[i+18*3] = {18-i, 0};
 
         //禁止マス(i0=0のときに注意)
-        vec2 imp_sec;
-        if(i0==0) imp_sec = {0, 1};
-        else imp_sec = {i0, 0};
+        v2b imp_sec(h, vb(w, false));
+        if(i0==0) imp_sec[0][1] = true;
+        else imp_sec[i0][0] = true;
+        
+        for(int i=0; i<h; i++){
+            if(f[i][0][1]) imp_sec[i][0] = true;
+            if(f[i][w-1][3]) imp_sec[i][w-1] = true;
+        }
+        for(int i=0; i<w; i++){
+            if(f[0][i][2]) imp_sec[0][i] = true;
+            if(f[h-1][i][0]) imp_sec[h-1][i] = true;
+        }
 
         //それぞれの区画にどの番号の作物を植えているか
         vi nowcrop(18*4);
@@ -72,11 +81,11 @@ struct Solver{
             pq.push({hv, i});
         }
 
-        //最初に81個の作物を植える．出入り口に面する区画（i0,0)には植えない
+        //最初に71個の作物を植える．出入り口に面する区画（i0,0)には植えない
         //いままでにいくつ作物を植えたか
         int cp_cnt = 0;
         for(int i=0; i<(int)section.size(); i++){
-            if(section[i].y==imp_sec.y && section[i].x==imp_sec.x) continue;
+            if(imp_sec[section[i].y][section[i].x]) continue;
             //作物の番号を入手する
             int cpnum = pq.top().second;
             pq.pop();
@@ -92,7 +101,7 @@ struct Solver{
         int sec_num = 0;
         for(int i=cp_cnt; i<(int)crop_info.size(); i++){
             // cout << sec_num << " ";
-            if(section[sec_num].y==imp_sec.y && section[sec_num].x==imp_sec.x){
+            if(imp_sec[section[sec_num].y][section[sec_num].x]){
                 // cout << sec_num << endl;
                 sec_num = (sec_num+1)%72;
                 continue;
