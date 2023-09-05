@@ -48,8 +48,51 @@ struct Solver{
     : t(t), h(h), w(w), i0(i0), k(k), f(f), cp(cp), crop_info(crop_info), dist_map(h, vi(w, 0)), dist_numvec(100) {}
 
     void solve(){
+        //各区画の出入り口からの距離とその最長距離
         int mx_dist = calc_dist();
 
+        //栽培期間が長いものから400個とって収穫時期の遅い順にソート
+        priority_queue<pair<int, int>> pq_long, pq_late;
+        for(int i=0; i<k; i++){
+            int s = crop_info[i].s;
+            int d = crop_info[i].d;
+            pq_long.push({d-s, i});
+        }
+        for(int i=0; i<400; i++){
+            int cpnum = pq_long.top().second;
+            pq_long.pop();
+            int d = crop_info[cpnum].d;
+            pq_late.push({d, cpnum});
+        }   
+        //収穫時期の遅い順に出入り口からの距離が長い区画を割り当てる
+        v2i ans;
+        for(int i=mx_dist; i>=0; i--){
+            for(int j=0; j<(int)dist_numvec[i].size(); j++){
+                int cpnum = pq_late.top().second;
+                pq_late.pop();
+                int y = dist_numvec[i][j].y;
+                int x = dist_numvec[i][j].x;
+                ans.push_back({cpnum+1, y, x, 1});
+            }
+        }
+        //答え出力
+//Local//////////////////////
+        // ofstream ansout("ansout.txt");
+        // ansout << (int)ans.size() << endl;
+        // for(int i=0; i<(int)ans.size(); i++){
+        //     for(int j=0; j<(int)ans[i].size(); j++){
+        //         ansout << ans[i][j] << " ";
+        //     }
+        //     ansout << endl;
+        // }
+//Submit///////////////////////
+        cout << (int)ans.size() << endl;
+        for(int i=0; i<(int)ans.size(); i++){
+            for(int j=0; j<(int)ans[i].size(); j++){
+                cout << ans[i][j] << " ";
+            }
+            cout << endl;
+        }
     }
 
     //各区画の出入り口からの距離をBFSで計算する
@@ -101,81 +144,9 @@ struct Solver{
 int main(){
 
 //Local/////////////////////////////////////////
-    ifstream input("input.txt");
-    int t, h, w, i0;
-    input >> t >> h >> w >> i0;
-
-    //{N, E, S, W}
-    v3b f(h, v2b(w, vb(4, 0)));
-    //西側と東側に柵を張る
-    for(int i=0; i<h; i++){
-        f[i][0][3] = 1;
-        f[i][w-1][1] = 1;
-    }
-    //北側と南側に柵を張る
-    for(int i=0; i<w; i++){
-        f[0][i][0] = 1;
-        f[h-1][i][2] = 1;
-    }
-    //西側の出入り口になる柵を排除
-    f[i0][0][3] = 0;
-
-    //横方向の水路を張る(h-2ライン*w)
-    for(int i=0; i<h-1; i++){
-        for(int j=0; j<w; j++){
-            char c; input >> c;
-            if(c=='1'){
-                //(i,j)区画の南側と(i+1,j)区画の北側に水路を敷設
-                f[i][j][2] = 1;
-                if(i!=h-2) f[i+1][j][0] = 1;
-            }
-        }
-    }
-    //縦方向の水路を張る(w-2ライン*h)
-    for(int i=0; i<h; i++){
-        for(int j=0; j<w-1; j++){
-            char c; input >> c;
-            if(c=='1'){
-                f[i][j][1] = 1;
-                if(i!=w-2) f[i][j+1][3] = 1;
-            }
-        }
-    }
-    int k; input >> k;
-    map<crop, int> cp;
-    //作物の番号から植えつけ，収穫時期の情報を得る
-    vector<crop> crop_info(k);
-    for(int i=0; i<k; i++){
-        int s, d; input >> s >> d;
-        crop_info[i] = {s, d};
-        cp.insert({{d, s}, i});
-    }
-
-    //map作成に使うデータ
-    ofstream output("mapdata.txt");
-    output << t << " " << h << " " << w << " " << i0 << endl;
-
-    for(int i=0; i<h-1; i++){
-        for(int j=0; j<w; j++){
-            if(f[i][j][2]) output << 1;
-            else output << 0;
-        }
-        output << endl;
-    }
-    for(int i=0; i<h; i++){
-        for(int j=0; j<w-1; j++){
-            if(f[i][j][1]) output << 1;
-            else output << 0;
-        }
-        output << endl;
-    }
-    output << endl;
-///////////////////////////////////////////////////////////
-    
-
-//Submit/////////////////////////////////////////////////
+    // ifstream input("input.txt");
     // int t, h, w, i0;
-    // cin >> t >> h >> w >> i0;
+    // input >> t >> h >> w >> i0;
 
     // //{N, E, S, W}
     // v3b f(h, v2b(w, vb(4, 0)));
@@ -195,7 +166,7 @@ int main(){
     // //横方向の水路を張る(h-2ライン*w)
     // for(int i=0; i<h-1; i++){
     //     for(int j=0; j<w; j++){
-    //         char c; cin >> c;
+    //         char c; input >> c;
     //         if(c=='1'){
     //             //(i,j)区画の南側と(i+1,j)区画の北側に水路を敷設
     //             f[i][j][2] = 1;
@@ -206,22 +177,94 @@ int main(){
     // //縦方向の水路を張る(w-2ライン*h)
     // for(int i=0; i<h; i++){
     //     for(int j=0; j<w-1; j++){
-    //         char c; cin >> c;
+    //         char c; input >> c;
     //         if(c=='1'){
     //             f[i][j][1] = 1;
-    //             if(i!=w-2) f[i][j+1][3] = 1;
+    //             if(j!=w-2) f[i][j+1][3] = 1;
     //         }
     //     }
     // }
-    // int k; cin >> k;
+    // int k; input >> k;
     // map<crop, int> cp;
     // //作物の番号から植えつけ，収穫時期の情報を得る
     // vector<crop> crop_info(k);
     // for(int i=0; i<k; i++){
-    //     int s, d; cin >> s >> d;
+    //     int s, d; input >> s >> d;
     //     crop_info[i] = {s, d};
     //     cp.insert({{d, s}, i});
     // }
+
+    // //map作成に使うデータ
+    // ofstream output("mapdata.txt");
+    // output << t << " " << h << " " << w << " " << i0 << endl;
+
+    // for(int i=0; i<h-1; i++){
+    //     for(int j=0; j<w; j++){
+    //         if(f[i][j][2]) output << 1;
+    //         else output << 0;
+    //     }
+    //     output << endl;
+    // }
+    // for(int i=0; i<h; i++){
+    //     for(int j=0; j<w-1; j++){
+    //         if(f[i][j][1]) output << 1;
+    //         else output << 0;
+    //     }
+    //     output << endl;
+    // }
+    // output << endl;
+///////////////////////////////////////////////////////////
+    
+
+//Submit/////////////////////////////////////////////////
+    int t, h, w, i0;
+    cin >> t >> h >> w >> i0;
+
+    //{N, E, S, W}
+    v3b f(h, v2b(w, vb(4, 0)));
+    //西側と東側に柵を張る
+    for(int i=0; i<h; i++){
+        f[i][0][3] = 1;
+        f[i][w-1][1] = 1;
+    }
+    //北側と南側に柵を張る
+    for(int i=0; i<w; i++){
+        f[0][i][0] = 1;
+        f[h-1][i][2] = 1;
+    }
+    //西側の出入り口になる柵を排除
+    f[i0][0][3] = 0;
+
+    //横方向の水路を張る(h-2ライン*w)
+    for(int i=0; i<h-1; i++){
+        for(int j=0; j<w; j++){
+            char c; cin >> c;
+            if(c=='1'){
+                //(i,j)区画の南側と(i+1,j)区画の北側に水路を敷設
+                f[i][j][2] = 1;
+                if(i!=h-2) f[i+1][j][0] = 1;
+            }
+        }
+    }
+    //縦方向の水路を張る(w-2ライン*h)
+    for(int i=0; i<h; i++){
+        for(int j=0; j<w-1; j++){
+            char c; cin >> c;
+            if(c=='1'){
+                f[i][j][1] = 1;
+                if(i!=w-2) f[i][j+1][3] = 1;
+            }
+        }
+    }
+    int k; cin >> k;
+    map<crop, int> cp;
+    //作物の番号から植えつけ，収穫時期の情報を得る
+    vector<crop> crop_info(k);
+    for(int i=0; i<k; i++){
+        int s, d; cin >> s >> d;
+        crop_info[i] = {s, d};
+        cp.insert({{d, s}, i});
+    }
 
 /////////////////////////////////////////////
 
