@@ -41,22 +41,25 @@ struct Solver{
     const int t, h, w, i0, k;
     v3b f;
     v2i dist_map;
+    vector<vector<vec2>> dist_numvec;
     map<crop, int> cp;
     vector<crop> crop_info;
     Solver(int t, int h, int w, int i0, int k, v3b f, map<crop,int> cp, vector<crop> crop_info)
-    : t(t), h(h), w(w), i0(i0), k(k), f(f), cp(cp), crop_info(crop_info), dist_map(h, vi(w, 0)) {}
+    : t(t), h(h), w(w), i0(i0), k(k), f(f), cp(cp), crop_info(crop_info), dist_map(h, vi(w, 0)), dist_numvec(100) {}
 
     void solve(){
-        calc_dist();
+        int mx_dist = calc_dist();
+
     }
 
     //各区画の出入り口からの距離をBFSで計算する
-    void calc_dist(){
+    int calc_dist(){
         v2b visit(h, vb(w, false));
         priority_queue<pair<int, vec2>, vector<pair<int, vec2>>, greater<pair<int, vec2>>> pq;
         vector<vec2> dydx = {{-1,0},{0,1},{1,0},{0,-1}};//{N, E, S, W}の順
         pq.push({0,{i0,0}});
         
+        //BFSで出入り口からの距離を求める
         while(!pq.empty()){
             int dist = pq.top().first;
             vec2 pos = pq.top().second;
@@ -81,6 +84,16 @@ struct Solver{
             }
             distout << endl;
         }
+        //距離がiの区画を保存する
+        int mx_dist = -1;
+        for(int i=0; i<h; i++){
+            for(int j=0; j<w; j++){
+                int num = dist_map[i][j];
+                mx_dist = max(mx_dist, num);
+                dist_numvec[num].push_back({i,j});
+            }
+        }
+        return mx_dist;
     }
 };
 
