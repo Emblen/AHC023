@@ -1,5 +1,6 @@
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
 f = open('mapdata.txt', 'r')
 s = f.readline()
 print(s)
@@ -45,10 +46,17 @@ for i in range(h):
 
 f2 = open('dist.txt', 'r')
 dist = f2.read().split()
-print(dist)
 for i in range(h):
     for j in range(w):
         c = dist[i*w+j]
         ax.text(j+0.2, i+0.8, c, size=8)
+
+#栽培期間のヒストグラム
+fig2 = plt.figure()
+f3 = open('hist.txt', 'r')
+pdata = f3.read().split()
+pdata_int = [int(i) for i in pdata]
+plt.grid(linestyle='dotted')
+plt.hist(pdata_int, color='green', rwidth=0.9, bins=25)
 
 plt.show()

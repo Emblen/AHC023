@@ -5,6 +5,8 @@
         "iosfwd": "cpp",
         "xtree": "cpp",
         "iostream": "cpp",
-        "ostream": "cpp"
+        "ostream": "cpp",
+        "random": "cpp",
+        "queue": "cpp"
     }
 }

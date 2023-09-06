@@ -32,11 +32,6 @@ struct vec2{
     }
 };
 
-
-struct Feild{
-
-};
-
 struct Solver{
     const int t, h, w, i0, k;
     v3b f;
@@ -50,31 +45,54 @@ struct Solver{
     void solve(){
         //各区画の出入り口からの距離とその最長距離
         int mx_dist = calc_dist();
-
-        //栽培期間が長いものから400個とって収穫時期の遅い順にソート
-        priority_queue<pair<int, int>> pq_long, pq_late;
+        
+        //5期作をする
+        v2i crop_5period(5);
         for(int i=0; i<k; i++){
             int s = crop_info[i].s;
             int d = crop_info[i].d;
-            pq_long.push({d-s, i});
+            if(1<=s && s<=20 && 1<=d && d<=20) crop_5period[0].push_back(i);
+            else if(21<=s && s<=40 && 21<=d && d<=40) crop_5period[1].push_back(i);
+            else if(41<=s && s<=60 && 41<=d && d<=60) crop_5period[2].push_back(i);
+            else if(61<=s && s<=80 && 61<=d && d<=80) crop_5period[3].push_back(i);
+            else if(81<=s && s<=100 && 81<=d && d<=100) crop_5period[4].push_back(i);
         }
-        for(int i=0; i<400; i++){
-            int cpnum = pq_long.top().second;
-            pq_long.pop();
-            int d = crop_info[cpnum].d;
-            pq_late.push({d, cpnum});
-        }   
-        //収穫時期の遅い順に出入り口からの距離が長い区画を割り当てる
+
         v2i ans;
-        for(int i=mx_dist; i>=0; i--){
-            for(int j=0; j<(int)dist_numvec[i].size(); j++){
-                int cpnum = pq_late.top().second;
-                pq_late.pop();
-                int y = dist_numvec[i][j].y;
-                int x = dist_numvec[i][j].x;
-                ans.push_back({cpnum+1, y, x, 1});
+
+        for(int period=0; period<5; period++){
+            //栽培期間が長いものから400個とって収穫時期の遅い順にソート
+            priority_queue<pair<int, int>> pq_long, pq_late;
+            for(int i=0; i<(int)crop_5period[period].size(); i++){
+                int cpnum = crop_5period[period][i];
+                int s = crop_info[cpnum].s;
+                int d = crop_info[cpnum].d;
+                pq_long.push({d-s, cpnum});
             }
+            int period_cropnum = min(400, (int)crop_5period[period].size());
+
+            for(int i=0; i<period_cropnum; i++){
+                int cpnum = pq_long.top().second;
+                pq_long.pop();
+                int d = crop_info[cpnum].d;
+                pq_late.push({d, cpnum});
+            }   
+            int cnt = 0;
+            //収穫時期の遅い順に出入り口からの距離が長い区画を割り当てる
+            for(int i=mx_dist; i>=0; i--){
+                for(int j=0; j<(int)dist_numvec[i].size(); j++){
+                    int cpnum = pq_late.top().second;
+                    pq_late.pop();
+                    int y = dist_numvec[i][j].y;
+                    int x = dist_numvec[i][j].x;
+                    ans.push_back({cpnum+1, y, x, period*20+1});
+                    cnt++;
+                    if(cnt==period_cropnum) break;
+                }
+                if(cnt==period_cropnum) break;
+            }   
         }
+        
         //答え出力
 //Local//////////////////////
         // ofstream ansout("ansout.txt");
@@ -213,6 +231,30 @@ int main(){
     //     output << endl;
     // }
     // output << endl;
+
+    // //20の期間を1ピリオドとするとどれくらい植えられるか
+    // vi period(5,0);
+    // int lost = 0;
+    // for(int i=0; i<k; i++){
+    //     int s = crop_info[i].s;
+    //     int d = crop_info[i].d;
+    //     if(1<=s && s<=20 && 1<=d && d<=20) period[0]++;
+    //     else if(21<=s && s<=40 && 21<=d && d<=40) period[1]++;
+    //     else if(41<=s && s<=60 && 41<=d && d<=60) period[2]++;
+    //     else if(61<=s && s<=80 && 61<=d && d<=80) period[3]++;
+    //     else if(81<=s && s<=100 && 81<=d && d<=100) period[4]++;
+    //     else lost++;
+    // }
+    // cout << k << endl;
+    // for(auto v:period) cout << v << " ";
+    // cout << endl;
+    // cout << lost << endl;
+
+    // //栽培期間のヒストグラムを出してみたい
+    // ofstream hist("hist.txt");
+    // // for(int i=0; i<k; i++) hist << crop_info[i].d - crop_info[i].s << endl;
+    // for(int i=0; i<k; i++) hist << crop_info[i].d << endl;
+
 ///////////////////////////////////////////////////////////
     
 
@@ -252,7 +294,7 @@ int main(){
             char c; cin >> c;
             if(c=='1'){
                 f[i][j][1] = 1;
-                if(i!=w-2) f[i][j+1][3] = 1;
+                if(j!=w-2) f[i][j+1][3] = 1;
             }
         }
     }
