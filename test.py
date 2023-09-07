@@ -43,21 +43,21 @@ for i in range(h):
             plt.plot([j+1, j+1], [i, i+1], color='black', linewidth=2)    
 
 #距離用
-# f2 = open('dist.txt', 'r')
-# dist = f2.read().split()
-# for i in range(h):
-#     for j in range(w):
-#         c = dist[i*w+j]
-#         ax.text(j+0.2, i+0.8, c, size=8)
-        
-#パス用
 f2 = open('dist.txt', 'r')
 dist = f2.read().split()
-dist_int = [int(i) for i in dist]
-for i in range(int(len(dist)/2)):
-    y = dist_int[i*2]
-    x = dist_int[i*2+1]
-    ax.text(x+0.2, y+0.8, 0, size=8)
+for i in range(h):
+    for j in range(w):
+        c = dist[i*w+j]
+        ax.text(j+0.2, i+0.8, c, size=8)
+        
+#パス用
+# f2 = open('dist.txt', 'r')
+# dist = f2.read().split()
+# dist_int = [int(i) for i in dist]
+# for i in range(int(len(dist)/2)):
+#     y = dist_int[i*2]
+#     x = dist_int[i*2+1]
+#     ax.text(x+0.2, y+0.8, 0, size=8)
     
 
 #栽培期間のヒストグラム

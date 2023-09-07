@@ -139,13 +139,13 @@ struct Solver{
                 pq.push({dist+1, {ny, nx}});
             }
         }
-        // ofstream distout("dist.txt");
-        // for(int i=0; i<h; i++){
-        //     for(int j=0; j<w; j++){
-        //         distout << dist_map[i][j] << " ";
-        //     }
-        //     distout << endl;
-        // }
+        ofstream distout("dist.txt");
+        for(int i=0; i<h; i++){
+            for(int j=0; j<w; j++){
+                distout << dist_map[i][j] << " ";
+            }
+            distout << endl;
+        }
         //距離がiの区画を保存する
         int mx_dist = -1;
         for(int i=0; i<h; i++){
@@ -204,8 +204,8 @@ struct Solver{
         path.push_back(goal);
         reverse(all(path));
 
-        ofstream distout("dist.txt");
-        for(auto v:path) distout << v.y << " " << v.x << endl;
+        // ofstream distout("dist.txt");
+        // for(auto v:path) distout << v.y << " " << v.x << endl;
 
         return path;
     }
