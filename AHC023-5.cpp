@@ -35,64 +35,25 @@ struct vec2{
 struct Solver{
     const int t, h, w, i0, k;
     v3b f;
+    //出入り口からの距離
     v2i dist_map;
-    vector<vector<vec2>> dist_numvec;
+    //それぞれピリオドで作物を育てているかどうか
+    v3b crop_exist;
     map<crop, int> cp;
     vector<crop> crop_info;
     Solver(int t, int h, int w, int i0, int k, v3b f, map<crop,int> cp, vector<crop> crop_info)
-    : t(t), h(h), w(w), i0(i0), k(k), f(f), cp(cp), crop_info(crop_info), dist_map(h, vi(w, 0)), dist_numvec(100) {}
+    : t(t), h(h), w(w), i0(i0), k(k), f(f), cp(cp), crop_info(crop_info), dist_map(h, vi(w, 0)), crop_exist(4, v2b(h, vb(w,0))) {}
 
     void solve(){
         //各区画の出入り口からの距離とその最長距離
-        int mx_dist = calc_dist();
+        calc_dist();
         //右側までの最短経路
-        path_toright();
+        vector<vec2> path = path_toright();
+        //パスの北側と南側で区画を分割して値を割り当てる
+        v2i sp_section = split_section(path);
+        //区画ごとにn期作をする
+        v2i ans = crop_period(sp_section);
         
-        //4期作をする
-        v2i crop_4period(4);
-        for(int i=0; i<k; i++){
-            int s = crop_info[i].s;
-            int d = crop_info[i].d;
-            if(1<=s && s<=25 && 1<=d && d<=25) crop_4period[0].push_back(i);
-            else if(26<=s && s<=50 && 26<=d && d<=50) crop_4period[1].push_back(i);
-            else if(51<=s && s<=75 && 51<=d && d<=75) crop_4period[2].push_back(i);
-            else if(76<=s && s<=100 && 76<=d && d<=100) crop_4period[3].push_back(i);
-        }
-
-        v2i ans;
-
-        for(int period=0; period<4; period++){
-            //栽培期間が長いものから400個とって収穫時期の遅い順にソート
-            priority_queue<pair<int, int>> pq_long, pq_late;
-            for(int i=0; i<(int)crop_4period[period].size(); i++){
-                int cpnum = crop_4period[period][i];
-                int s = crop_info[cpnum].s;
-                int d = crop_info[cpnum].d;
-                pq_long.push({d-s, cpnum});
-            }
-            int period_cropnum = min(400, (int)crop_4period[period].size());
-
-            for(int i=0; i<period_cropnum; i++){
-                int cpnum = pq_long.top().second;
-                pq_long.pop();
-                int d = crop_info[cpnum].d;
-                pq_late.push({d, cpnum});
-            }   
-            int cnt = 0;
-            //収穫時期の遅い順に出入り口からの距離が長い区画を割り当てる
-            for(int i=mx_dist; i>=0; i--){
-                for(int j=0; j<(int)dist_numvec[i].size(); j++){
-                    int cpnum = pq_late.top().second;
-                    pq_late.pop();
-                    int y = dist_numvec[i][j].y;
-                    int x = dist_numvec[i][j].x;
-                    ans.push_back({cpnum+1, y, x, period*+1});
-                    cnt++;
-                    if(cnt==period_cropnum) break;
-                }
-                if(cnt==period_cropnum) break;
-            }   
-        }
         
         //答え出力
 //Local//////////////////////
@@ -115,7 +76,7 @@ struct Solver{
     }
 
     //各区画の出入り口からの距離をBFSで計算する
-    int calc_dist(){
+    void calc_dist(){
         v2b visit(h, vb(w, false));
         priority_queue<pair<int, vec2>, vector<pair<int, vec2>>, greater<pair<int, vec2>>> pq;
         vector<vec2> dydx = {{-1,0},{0,1},{1,0},{0,-1}};//{N, E, S, W}の順
@@ -139,23 +100,14 @@ struct Solver{
                 pq.push({dist+1, {ny, nx}});
             }
         }
-        // ofstream distout("dist.txt");
-        // for(int i=0; i<h; i++){
-        //     for(int j=0; j<w; j++){
-        //         distout << dist_map[i][j] << " ";
-        //     }
-        //     distout << endl;
-        // }
-        //距離がiの区画を保存する
-        int mx_dist = -1;
+        ofstream distout("dist.txt");
         for(int i=0; i<h; i++){
             for(int j=0; j<w; j++){
-                int num = dist_map[i][j];
-                mx_dist = max(mx_dist, num);
-                dist_numvec[num].push_back({i,j});
+                distout << dist_map[i][j] << " ";
             }
+            distout << endl;
         }
-        return mx_dist;
+        //距離がiの区画を保存する
     }
 
     //出入り口からマップの中心について点対称な柵までの最短パスを求める
@@ -204,11 +156,145 @@ struct Solver{
         path.push_back(goal);
         reverse(all(path));
 
-        ofstream distout("dist.txt");
-        for(auto v:path) distout << v.y << " " << v.x << endl;
+        // ofstream distout("dist.txt");
+        // for(auto v:path) distout << v.y << " " << v.x << endl;
 
         return path;
     }
+    //区画をいくつかのまとまりに分割する
+    v2i split_section(vector<vec2> path){
+        v2i sp_section(h, vi(w, -1));
+        for(auto v:path) sp_section[v.y][v.x] = 0;
+        for(int j=0; j<w; j++){
+            for(int i=0; i<h; i++){
+                if(sp_section[i][j]==0) break;
+                sp_section[i][j] = 1;
+            }
+        }
+        //分割した区画の番号の情報を出力する
+        // ofstream distout("dist.txt");
+        // for(int i=0; i<h; i++){
+        //     for(int j=0; j<w; j++){
+        //         distout << sp_section[i][j] << " ";
+        //     }
+        //     distout << endl;
+        // }
+        return sp_section;
+    }
+
+    v2i crop_period(v2i sp_section){
+        //4期作をする
+        v2i crop_4period(4);
+        v2i crop_2period(2);
+        for(int i=0; i<k; i++){
+            int s = crop_info[i].s;
+            int d = crop_info[i].d;
+            if(1<=s && s<=25 && 1<=d && d<=25) crop_4period[0].push_back(i);
+            else if(26<=s && s<=50 && 26<=d && d<=50) crop_4period[1].push_back(i);
+            else if(51<=s && s<=75 && 51<=d && d<=75) crop_4period[2].push_back(i);
+            else if(76<=s && s<=100 && 76<=d && d<=100) crop_4period[3].push_back(i);
+
+            if(d-s>25){
+                if(1<=s && s<=50 && 1<=d && d<=50) crop_2period[0].push_back(i);
+                if(51<=s && s<=100 && 51<=d && d<=100) crop_2period[1].push_back(i);
+            }
+        }
+        cout << "crop2 size: " << (int)crop_2period[0].size() << " " << (int)crop_2period[1].size() << endl;
+
+        v2i ans;
+        int total_score = 0;
+
+        assign_section(ans, total_score, 2, crop_2period, sp_section, -1);
+        assign_section(ans, total_score, 4, crop_4period, sp_section, 1);
+        cout << total_score << endl;
+        return ans;
+    }
+
+    //分割した区画の中で距離が大きい順にソートした配列を返す
+    vector<vec2> sort_longdist(int val, v2i sp_section){
+        vector<vec2> long_dist;
+        priority_queue<pair<int, vec2>> pq;
+
+        for(int i=0; i<h; i++){
+            for(int j=0; j<w; j++){
+                if(sp_section[i][j]==val){
+                    pq.push({dist_map[i][j], {i,j}});
+                }
+            }
+        }
+        while(!pq.empty()){
+            vec2 pos = pq.top().second;
+            pq.pop();
+            long_dist.push_back(pos);
+        }
+        return long_dist;
+    }
+
+    void assign_section(v2i& ans, int& total_score, int total_period, v2i crop_period, v2i sp_section, int sp_val){
+        //グループ番号がsp_valである区画のうち，出入り口からの距離が長い順にソートした配列
+        vector<vec2> long_dist = sort_longdist(sp_val, sp_section);
+
+        for(int period=0; period<total_period; period++){
+            //栽培期間が長いものから400個とって収穫時期の遅い順にソート
+            priority_queue<pair<int, int>> pq_long, pq_late;
+            for(int i=0; i<(int)crop_period[period].size(); i++){
+                int cpnum = crop_period[period][i];
+                int s = crop_info[cpnum].s;
+                int d = crop_info[cpnum].d;
+                pq_long.push({d-s, cpnum});
+            }
+            int period_cropnum = min(400, (int)crop_period[period].size());
+
+            for(int i=0; i<period_cropnum; i++){
+                int cpnum = pq_long.top().second;
+                pq_long.pop();
+                int d = crop_info[cpnum].d;
+                pq_late.push({d, cpnum});
+            }   
+            //収穫時期の遅い順に出入り口からの距離が長い区画を割り当てる
+            for(auto v:long_dist){
+                int cpnum = pq_late.top().second;
+                pq_late.pop();
+                // cout << v.y << " " << v.x << endl;
+                ans.push_back({cpnum+1, v.y, v.x, (100/total_period)*period+1});
+
+                if(total_period==2){
+                    crop_exist[period][v.y][v.x] = 1;
+                    crop_exist[period+1][v.y][v.x] = 1;
+                }
+                else crop_exist[period][v.y][v.x] = 1;
+                total_score += crop_info[cpnum].d - crop_info[cpnum].s + 1;
+
+                if(pq_late.empty()) break;
+            }
+
+            if(total_period==2) continue;
+            priority_queue<pair<int, vec2>> pq;
+            for(int i=0; i<h; i++){
+                for(int j=0; j<w; j++){
+                    if(period%2) continue;
+                    if(!crop_exist[period][i][j]) pq.push({dist_map[i][j], {i,j}}); 
+                }
+            }
+            vector<vec2> remain_section;
+            while(!pq.empty()){
+                vec2 pos = pq.top().second;
+                pq.pop();
+                remain_section.push_back(pos);
+            }
+            for(auto v:remain_section){
+                int cpnum = pq_late.top().second;
+                pq_late.pop();
+                // cout << v.y << " " << v.x << endl;
+                ans.push_back({cpnum+1, v.y, v.x, (100/total_period)*period+1});
+                crop_exist[period][v.y][v.x] = 1;
+                total_score += crop_info[cpnum].d - crop_info[cpnum].s + 1;
+
+                if(pq_late.empty()) break;
+            }
+        }   
+    }
+    
 };
 
 
