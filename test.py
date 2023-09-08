@@ -48,6 +48,9 @@ dist = f2.read().split()
 for i in range(h):
     for j in range(w):
         c = dist[i*w+j]
+        if c=='1':
+            print(c)
+            ax.axhspan(i, i+1, j*0.05, (j+1)*0.05, color="coral")
         ax.text(j+0.2, i+0.8, c, size=8)
         
 #パス用

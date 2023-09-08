@@ -37,18 +37,31 @@ struct Solver{
     v3b f;
     v2i dist_map;
     vector<vector<vec2>> dist_numvec;
+    v2i now_crop;
     map<crop, int> cp;
     vector<crop> crop_info;
     Solver(int t, int h, int w, int i0, int k, v3b f, map<crop,int> cp, vector<crop> crop_info)
-    : t(t), h(h), w(w), i0(i0), k(k), f(f), cp(cp), crop_info(crop_info), dist_map(h, vi(w, 0)), dist_numvec(100) {}
+    : t(t), h(h), w(w), i0(i0), k(k), f(f), cp(cp), crop_info(crop_info), dist_map(h, vi(w, 0)), dist_numvec(100), now_crop(h, vi(w,-1)) {}
 
     void solve(){
         //各区画の出入り口からの距離とその最長距離
         int mx_dist = calc_dist();
         //右側までの最短経路
         path_toright();
-        
-        //4期作をする
+        set<vec2> safe_section = calc_safe_section();
+
+        //出入り口からの距離が近くて安全な区画
+        vector<vec2> short_safe_section;
+        for(int i=0; i<100; i++){
+            for(int j=0; j<(int)dist_numvec[i].size(); j++){
+                vec2 a = dist_numvec[i][j];
+                if(safe_section.count(a)){
+                    short_safe_section.push_back(a);
+                }
+            }
+        }
+    
+        //4期作をするs
         v2i crop_4period(4);
         for(int i=0; i<k; i++){
             int s = crop_info[i].s;
@@ -62,7 +75,7 @@ struct Solver{
         v2i ans;
 
         for(int period=0; period<4; period++){
-            //栽培期間が長いものから400個とって収穫時期の遅い順にソート
+            //栽培期間が長い順にキューに入れる
             priority_queue<pair<int, int>> pq_long, pq_late;
             for(int i=0; i<(int)crop_4period[period].size(); i++){
                 int cpnum = crop_4period[period][i];
@@ -70,6 +83,7 @@ struct Solver{
                 int d = crop_info[cpnum].d;
                 pq_long.push({d-s, cpnum});
             }
+            // 最大400個とって収穫時期の遅い順にソート
             int period_cropnum = min(400, (int)crop_4period[period].size());
 
             for(int i=0; i<period_cropnum; i++){
@@ -86,12 +100,42 @@ struct Solver{
                     pq_late.pop();
                     int y = dist_numvec[i][j].y;
                     int x = dist_numvec[i][j].x;
-                    ans.push_back({cpnum+1, y, x, period*+1});
+                    ans.push_back({cpnum+1, y, x, period*25+1});
+                    now_crop[y][x] = cpnum;
                     cnt++;
                     if(cnt==period_cropnum) break;
                 }
                 if(cnt==period_cropnum) break;
             }   
+
+            //追加の栽培
+            if(pq_long.empty() || (int)safe_section.size()==0) continue;
+            //残っている作物を収穫時期が早い順に並び替える
+            priority_queue<pair<int, int>, vector<pair<int, int>>, greater<pair<int, int>>> pq_early;
+            while(!pq_long.empty()){
+                int cpnum = pq_long.top().second;
+                pq_long.pop();
+                int d = crop_info[cpnum].d;
+                pq_early.push({d, cpnum});
+            }
+            //安全な区画に，植える時期が現在植えている作物の収穫時期+2以内であれば収穫時期+2に植える，そうでなければスキップ
+            int i = 0;
+            int siz = (int)short_safe_section.size();
+            while(!pq_early.empty()){
+                int cpnum = pq_early.top().second;
+                int s = crop_info[cpnum].s;
+                pq_early.pop();
+                //安全な区画の座標
+                vec2 pos = short_safe_section[i];
+                //現在植えている作物の収穫時期
+                int pre_d = crop_info[now_crop[pos.y][pos.x]].d;
+
+                if(pre_d+2<=s && pre_d+2<100){
+                    ans.push_back({cpnum+1, pos.y, pos.x, pre_d+2});
+                    now_crop[pos.y][pos.x] = cpnum;
+                    i = (i+1)%siz;
+                } 
+            }
         }
         
         //答え出力
@@ -112,6 +156,40 @@ struct Solver{
         //     }
         //     cout << endl;
         // }
+    }
+    //周りに水路がない区画
+    set<vec2> calc_safe_section(){
+        vector<vec2> dydx = {{-1,0}, {0,1}, {1,0}, {0,-1}}; //{N, E, S, W}
+        set<vec2> issafe;
+
+        for(int i=0; i<h; i++){
+            for(int j=0; j<w; j++){
+                bool flag = true;
+                //区画(i,j)が水路や柵に接していればもちろんだめ
+                for(int d=0; d<4; d++) if(f[i][j][d]) flag = false;
+
+                for(int d=0; d<(int)dydx.size(); d++){
+                    if(!flag) break;
+                    int y = i + dydx[d].y;
+                    int x = j + dydx[d].x;
+                    if(y<0 || y>=h || x<0 || x>=w) continue;
+                    if(d%2 && (f[y][x][0] || f[y][x][2])) flag = false;
+                    else if (!(d%2) && (f[y][x][1] || f[y][x][3])) flag = false;
+                }
+                if(flag) issafe.insert({i,j});
+            }
+        }
+        v2i safe_pos(h, vi(w,0));
+    
+        // ofstream distout("dist.txt");
+        // for(int i=0; i<h; i++){
+        //     for(int j=0; j<w; j++){
+        //         distout << safe_pos[i][j] << " ";
+        //     }
+        //     distout << endl;
+        // }
+        return issafe;
+
     }
 
     //各区画の出入り口からの距離をBFSで計算する
@@ -204,8 +282,8 @@ struct Solver{
         path.push_back(goal);
         reverse(all(path));
 
-        ofstream distout("dist.txt");
-        for(auto v:path) distout << v.y << " " << v.x << endl;
+        // ofstream distout("dist.txt");
+        // for(auto v:path) distout << v.y << " " << v.x << endl;
 
         return path;
     }
@@ -304,7 +382,7 @@ int main(){
 
     //栽培期間のヒストグラムを出してみたい
     ofstream hist("hist.txt");
-    for(int i=0; i<k; i++) hist << crop_info[i].d - crop_info[i].s << endl;
+    for(int i=0; i<k; i++) if(crop_info[i].d - crop_info[i].s <= 5) hist << crop_info[i].s << endl;
     int cnt = 0; 
     vector<int> half_period(2);
     for(int i=0; i<k; i++){

@@ -116,7 +116,7 @@ struct Solver{
         vector<vector<vec2>> par(h, vector<vec2>(w, {-1,-1}));
         vector<vec2> dydx = {{-1,0},{0,1},{1,0},{0,-1}};//{N, E, S, W}の順
         v2i dist(h, vi(w, 0));
-        vec2 target = {19-i0, 19};
+        vec2 target = {19, 19};
         vec2 goal;
 
         priority_queue<pair<int, vec2>, vector<pair<int, vec2>>, greater<pair<int, vec2>>> pq;
